@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Каталог — АгроТеч</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div id="header"></div>
+
+  <div class="container">
+    <h2 class="section-title">Каталог <span>техники</span></h2>
+
+    <div style="display:flex; gap:12px; margin-bottom:30px; flex-wrap:wrap; justify-content:center;">
+      <button class="btn btn-primary btn-sm filter-btn active" data-cat="">Все</button>
+      <button class="btn btn-outline btn-sm filter-btn" data-cat="Тракторы" style="color:var(--green-700);border-color:var(--green-300)">Тракторы</button>
+      <button class="btn btn-outline btn-sm filter-btn" data-cat="Комбайны" style="color:var(--green-700);border-color:var(--green-300)">Комбайны</button>
+      <button class="btn btn-outline btn-sm filter-btn" data-cat="Сеялки" style="color:var(--green-700);border-color:var(--green-300)">Сеялки</button>
+      <button class="btn btn-outline btn-sm filter-btn" data-cat="Плуги" style="color:var(--green-700);border-color:var(--green-300)">Плуги</button>
+      <button class="btn btn-outline btn-sm filter-btn" data-cat="Опрыскиватели" style="color:var(--green-700);border-color:var(--green-300)">Опрыскиватели</button>
+      <button class="btn btn-outline btn-sm filter-btn" data-cat="Косилки" style="color:var(--green-700);border-color:var(--green-300)">Косилки</button>
+      <button class="btn btn-outline btn-sm filter-btn" data-cat="Культиваторы" style="color:var(--green-700);border-color:var(--green-300)">Культиваторы</button>
+    </div>
+
+    <div style="max-width:400px; margin:0 auto 30px;">
+      <input type="text" id="search" placeholder="Поиск техники..." class="form-group" style="width:100%;padding:12px 16px;border:2px solid var(--gray-200);border-radius:8px;font-size:0.95rem;">
+    </div>
+
+    <div class="grid" id="products-grid"></div>
+  </div>
+
+  <div id="footer"></div>
+  <script src="/js/main.js"></script>
+  <script>
+    document.getElementById('header').innerHTML = getHeader('catalog');
+    document.getElementById('footer').innerHTML = getFooter();
+
+    let currentCat = '';
+    async function loadProducts() {
+      const search = document.getElementById('search').value;
+      let url = '/api/products?';
+      if (currentCat) url += `category=${encodeURIComponent(currentCat)}&`;
+      if (search) url += `search=${encodeURIComponent(search)}`;
+      const products = await api(url);
+      document.getElementById('products-grid').innerHTML = products.length
+        ? products.map(productCard).join('')
+        : '<p style="text-align:center;color:var(--gray-500);grid-column:1/-1">Техника не найдена</p>';
+    }
+
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn').forEach(b => { b.classList.remove('active'); b.style.background = ''; b.style.color = 'var(--green-700)'; });
+        btn.classList.add('active'); btn.style.background = 'var(--green-600)'; btn.style.color = '#fff';
+        currentCat = btn.dataset.cat;
+        loadProducts();
+      });
+    });
+
+    document.getElementById('search').addEventListener('input', loadProducts);
+    loadProducts();
+  </script>
+</body>
+</html>
