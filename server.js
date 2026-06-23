@@ -143,6 +143,11 @@ app.put('/api/admin/bookings/:id', adminAuth, (req, res) => {
   res.json({ success: true });
 });
 
+app.delete('/api/admin/bookings/:id', adminAuth, (req, res) => {
+  run('DELETE FROM bookings WHERE id = ?', [Number(req.params.id)]);
+  res.json({ success: true });
+});
+
 app.post('/api/admin/products', adminAuth, upload.single('image'), (req, res) => {
   const { name, description, price_per_day, category } = req.body;
   const image = req.file ? req.file.filename : '';

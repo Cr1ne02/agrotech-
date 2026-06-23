@@ -216,6 +216,7 @@
         <a href="#" onclick="switchTab('bookings', this)"><span class="nav-icon">📋</span> Бронирования <span class="nav-badge" id="badge-bookings"></span></a>
         <a href="#" onclick="switchTab('users', this)"><span class="nav-icon">👥</span> Пользователи</a>
         <a href="#" onclick="switchTab('reviews', this)"><span class="nav-icon">⭐</span> Отзывы</a>
+        <a href="#" onclick="switchTab('settings', this)"><span class="nav-icon">⚙️</span> Настройки</a>
         <div class="divider"></div>
         <a href="/"><span class="nav-icon">🏠</span> На сайт</a>
         <a href="#" class="logout" onclick="logout()"><span class="nav-icon">🚪</span> Выйти</a>
@@ -270,6 +271,28 @@
         </div>
       </div>
 
+      <!-- Settings -->
+      <div id="section-settings" class="admin-section" style="display:none">
+        <div class="content-card">
+          <div class="content-card-header"><h3>⚙️ Настройки системы</h3></div>
+          <div class="content-card-body" style="padding:24px">
+            <div class="detail-section"><h4>Информация о системе</h4>
+              <div class="detail-row"><span class="label">Версия</span><span class="value">АгроТеч 1.0</span></div>
+              <div class="detail-row"><span class="label">Платформа</span><span class="value">Node.js + Express</span></div>
+              <div class="detail-row"><span class="label">База данных</span><span class="value">SQLite</span></div>
+            </div>
+            <div class="detail-section" style="margin-top:24px"><h4>Действия</h4>
+              <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px">
+                <button class="btn-export" onclick="exportData('products')">📥 Экспорт техники</button>
+                <button class="btn-export" onclick="exportData('bookings')">📥 Экспорт бронирований</button>
+                <button class="btn-export" onclick="exportData('users')">📥 Экспорт пользователей</button>
+                <button class="btn-export" onclick="exportData('reviews')">📥 Экспорт отзывов</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Products -->
       <div id="section-products" class="admin-section" style="display:none">
         <div class="content-card">
@@ -319,6 +342,11 @@
           <div class="content-card-header"><h3>👥 Пользователи</h3></div>
           <div class="toolbar">
             <input type="text" class="search-box" placeholder="Поиск по имени или email..." id="search-users" oninput="filterUsers()">
+            <select class="filter-select" id="filter-role" onchange="filterUsers()">
+              <option value="">Все роли</option>
+              <option value="admin">Администраторы</option>
+              <option value="user">Пользователи</option>
+            </select>
             <div class="toolbar-right">
               <button class="btn-export" onclick="exportData('users')">📥 Экспорт CSV</button>
             </div>
@@ -394,7 +422,7 @@
 
   <script src="/js/main.js"></script>
   <script>
-    const titles = { dashboard:'📊 <span>Дашборд</span>', products:'🚜 <span>Техника</span>', bookings:'📋 <span>Бронирования</span>', users:'👥 <span>Пользователи</span>', reviews:'⭐ <span>Отзывы</span>' };
+    const titles = { dashboard:'📊 <span>Дашборд</span>', products:'🚜 <span>Техника</span>', bookings:'📋 <span>Бронирования</span>', users:'👥 <span>Пользователи</span>', reviews:'⭐ <span>Отзывы</span>', settings:'⚙️ <span>Настройки</span>' };
     const statusMap = { pending:['Ожидает','status-pending'], confirmed:['Подтверждено','status-confirmed'], completed:['Завершено','status-completed'], cancelled:['Отменено','status-cancelled'] };
 
     let allProducts=[], allBookings=[], allUsers=[], allReviews=[];
@@ -473,14 +501,13 @@
     async function loadStats() {
       try {
         const s = await api('/api/admin/stats');
+        const pending = allBookings.filter(b=>b.status==='pending').length;
         document.getElementById('stats').innerHTML = `
           <div class="stat-card" onclick="switchTab('users', document.querySelectorAll('.admin-nav a')[3])"><div class="stat-icon">👥</div><div class="stat-num">${s.users}</div><div class="stat-label">Пользователей</div><div class="stat-change">Все аккаунты</div></div>
           <div class="stat-card" onclick="switchTab('products', document.querySelectorAll('.admin-nav a')[1])"><div class="stat-icon">🚜</div><div class="stat-num">${s.products}</div><div class="stat-label">Единиц техники</div><div class="stat-change">В каталоге</div></div>
-          <div class="stat-card" onclick="switchTab('bookings', document.querySelectorAll('.admin-nav a')[2])"><div class="stat-icon">📋</div><div class="stat-num">${s.bookings}</div><div class="stat-label">Бронирований</div><div class="stat-change">Всего заказов</div></div>
-          <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-num">${formatPrice(s.revenue)}</div><div class="stat-label">Выручка</div><div class="stat-change">Общий доход</div></div>`;
-        // Badges
+          <div class="stat-card" onclick="switchTab('bookings', document.querySelectorAll('.admin-nav a')[2])"><div class="stat-icon">📋</div><div class="stat-num">${s.bookings}</div><div class="stat-label">Бронирований</div><div class="stat-change">${pending ? pending + ' ожидает' : 'Нет ожидающих'}</div></div>
+          <div class="stat-card" onclick="switchTab('bookings', document.querySelectorAll('.admin-nav a')[2])"><div class="stat-icon">💰</div><div class="stat-num">${formatPrice(s.revenue)}</div><div class="stat-label">Выручка</div><div class="stat-change">Общий доход</div></div>`;
         const bp = document.getElementById('badge-products'); if(bp) bp.textContent = s.products;
-        const pending = allBookings.filter(b=>b.status==='pending').length;
         const bb = document.getElementById('badge-bookings'); if(bb) { bb.textContent = pending || ''; bb.style.display = pending ? '' : 'none'; }
       } catch { window.location.href = '/login.html'; }
     }
@@ -550,6 +577,7 @@
               <option ${b.status==='completed'?'selected':''} value="completed">Завершить</option>
               <option ${b.status==='cancelled'?'selected':''} value="cancelled">Отменить</option>
             </select>
+            <button class="btn-del" onclick="deleteBooking(${b.id}, ${b.id})">✕</button>
           </div></td>
         </tr>`).join('') || '<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">📋</div><p>Нет бронирований</p></div></td></tr>';
       document.getElementById('bookings-count').textContent = `Показано: ${list.length} из ${allBookings.length}`;
@@ -572,13 +600,17 @@
           <td>${u.email}</td><td>${u.phone || '—'}</td>
           <td><span class="role-badge role-${u.role}">${u.role==='admin'?'Админ':'Пользователь'}</span></td>
           <td style="color:#64748b">${formatDate(u.created_at)}</td>
-          <td>${u.role!=='admin'?`<button class="btn-del" onclick="deleteUser(${u.id},'${u.name.replace(/'/g,"\\'")}')">✕</button>`:''}</td>
-        </tr>`).join('');
+          <td><div class="btn-group">
+            <button class="btn-view" onclick="viewUser(${u.id})">👁</button>
+            ${u.role!=='admin'?`<button class="btn-del" onclick="deleteUser(${u.id},'${u.name.replace(/'/g,"\\'")}')">✕</button>`:''}
+          </div></td>
+        </tr>`).join('') || '<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">👥</div><p>Пользователи не найдены</p></div></td></tr>';
       document.getElementById('users-count').textContent = `Показано: ${list.length} из ${allUsers.length}`;
     }
     function filterUsers() {
       const s = document.getElementById('search-users').value.toLowerCase();
-      renderUsers(allUsers.filter(u => !s || u.name.toLowerCase().includes(s) || u.email.toLowerCase().includes(s)));
+      const r = document.getElementById('filter-role').value;
+      renderUsers(allUsers.filter(u => (!s || u.name.toLowerCase().includes(s) || u.email.toLowerCase().includes(s)) && (!r || u.role===r)));
     }
 
     async function loadReviews() {
@@ -593,7 +625,10 @@
           <td><span class="stars-display">${renderStars(r.rating)}</span></td>
           <td style="max-width:280px;color:#94a3b8">${r.comment || '<span style="color:#475569">Без комментария</span>'}</td>
           <td style="color:#64748b">${formatDate(r.created_at)}</td>
-          <td><button class="btn-del" onclick="deleteReview(${r.id})">✕</button></td>
+          <td><div class="btn-group">
+            <button class="btn-view" onclick="viewReview(${r.id})">👁</button>
+            <button class="btn-del" onclick="deleteReview(${r.id})">✕</button>
+          </div></td>
         </tr>`).join('') || '<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">⭐</div><p>Нет отзывов</p></div></td></tr>';
       document.getElementById('reviews-count').textContent = `Показано: ${list.length} из ${allReviews.length}`;
     }
@@ -634,15 +669,58 @@
           <div class="detail-row"><span class="label">Дней</span><span class="value">${days}</span></div>
           <div class="detail-row"><span class="label">Сумма</span><span class="value" style="color:#4ade80;font-size:1.1rem">${formatPrice(b.total_price)}</span></div>
           <div class="detail-row"><span class="label">Статус</span><span class="value"><span class="status-badge ${(statusMap[b.status]||[])[1]||''}">${(statusMap[b.status]||[])[0]||b.status}</span></span></div>
+          <div class="detail-row"><span class="label">Дата создания</span><span class="value">${formatDate(b.created_at)}</span></div>
         </div>
         <div style="margin-top:20px">
-          <select class="status-select" style="width:100%;padding:12px;font-size:0.9rem" onchange="updateBookingStatus(${b.id},this.value);closeDetail()">
+          <select class="status-select" style="width:100%;padding:12px;font-size:0.9rem;margin-bottom:12px" onchange="updateBookingStatus(${b.id},this.value);closeDetail()">
             <option ${b.status==='pending'?'selected':''} value="pending">Ожидает</option>
             <option ${b.status==='confirmed'?'selected':''} value="confirmed">Подтвердить</option>
             <option ${b.status==='completed'?'selected':''} value="completed">Завершить</option>
             <option ${b.status==='cancelled'?'selected':''} value="cancelled">Отменить</option>
           </select>
+          <button class="btn-del" style="width:100%;padding:12px;font-size:0.9rem" onclick="closeDetail();deleteBooking(${b.id}, ${b.id})">✕ Удалить бронирование</button>
         </div>
+      `);
+    }
+
+    function viewUser(id) {
+      const u = allUsers.find(x=>x.id===id); if(!u) return;
+      const userBookings = allBookings.filter(b=>b.user_name===u.name && b.email===u.email);
+      const totalSpent = userBookings.reduce((s,b)=>s+(b.status!=='cancelled'?b.total_price:0),0);
+      openDetail(`
+        <div class="detail-header"><h3>👤 ${u.name}</h3><button class="detail-close" onclick="closeDetail()">✕</button></div>
+        <div class="detail-section"><h4>Информация</h4>
+          <div class="detail-row"><span class="label">ID</span><span class="value">#${u.id}</span></div>
+          <div class="detail-row"><span class="label">Имя</span><span class="value">${u.name}</span></div>
+          <div class="detail-row"><span class="label">Email</span><span class="value">${u.email}</span></div>
+          <div class="detail-row"><span class="label">Телефон</span><span class="value">${u.phone||'Не указан'}</span></div>
+          <div class="detail-row"><span class="label">Роль</span><span class="value"><span class="role-badge role-${u.role}">${u.role==='admin'?'Админ':'Пользователь'}</span></span></div>
+          <div class="detail-row"><span class="label">Дата регистрации</span><span class="value">${formatDate(u.created_at)}</span></div>
+        </div>
+        <div class="detail-section"><h4>Статистика</h4>
+          <div class="detail-row"><span class="label">Бронирований</span><span class="value">${userBookings.length}</span></div>
+          <div class="detail-row"><span class="label">Потрачено</span><span class="value" style="color:#4ade80">${formatPrice(totalSpent)}</span></div>
+        </div>
+        ${userBookings.length ? `<div class="detail-section"><h4>Последние бронирования</h4>${userBookings.slice(0,5).map(b=>`
+          <div class="detail-row"><span class="label">${b.product_name}</span><span class="value"><span class="status-badge ${(statusMap[b.status]||[])[1]||''}">${(statusMap[b.status]||[])[0]||b.status}</span></span></div>`).join('')}</div>` : ''}
+        ${u.role!=='admin'?`<div style="margin-top:20px"><button class="btn-del" style="width:100%;padding:12px;font-size:0.9rem" onclick="closeDetail();deleteUser(${u.id},'${u.name.replace(/'/g,"\\'")}')">✕ Удалить пользователя</button></div>`:''}
+      `);
+    }
+
+    function viewReview(id) {
+      const r = allReviews.find(x=>x.id===id); if(!r) return;
+      openDetail(`
+        <div class="detail-header"><h3>⭐ Отзыв #${r.id}</h3><button class="detail-close" onclick="closeDetail()">✕</button></div>
+        <div class="detail-section"><h4>Автор</h4>
+          <div class="detail-row"><span class="label">Пользователь</span><span class="value">${r.user_name}</span></div>
+        </div>
+        <div class="detail-section"><h4>Отзыв</h4>
+          <div class="detail-row"><span class="label">Техника</span><span class="value">${r.product_name}</span></div>
+          <div class="detail-row"><span class="label">Оценка</span><span class="value"><span class="stars-display">${renderStars(r.rating)}</span> (${r.rating}/5)</span></div>
+          <div class="detail-row"><span class="label">Дата</span><span class="value">${formatDate(r.created_at)}</span></div>
+        </div>
+        <div class="detail-section"><h4>Комментарий</h4><p style="color:#cbd5e1;font-size:0.9rem;line-height:1.6">${r.comment||'Без комментария'}</p></div>
+        <div style="margin-top:20px"><button class="btn-del" style="width:100%;padding:12px;font-size:0.9rem" onclick="closeDetail();deleteReview(${r.id})">✕ Удалить отзыв</button></div>
       `);
     }
 
@@ -702,6 +780,7 @@
     }
     function deleteProduct(id,name) { showConfirm('Удалить технику?', `"${name}" будет удалена из каталога.`, async()=>{ await api(`/api/admin/products/${id}`,{method:'DELETE'}); loadAll(); showToast('Техника удалена','🗑️'); }); }
     function deleteUser(id,name) { showConfirm('Удалить пользователя?', `Аккаунт "${name}" будет удалён.`, async()=>{ await api(`/api/admin/users/${id}`,{method:'DELETE'}); loadAll(); showToast('Пользователь удалён','🗑️'); }); }
+    function deleteBooking(id, num) { showConfirm('Удалить бронирование?', `Бронирование #${num} будет удалено без возможности восстановления.`, async()=>{ await api(`/api/admin/bookings/${id}`,{method:'DELETE'}); loadAll(); showToast('Бронирование удалено','🗑️'); }); }
     function deleteReview(id) { showConfirm('Удалить отзыв?', 'Отзыв будет удалён без возможности восстановления.', async()=>{ await api(`/api/admin/reviews/${id}`,{method:'DELETE'}); loadReviews(); showToast('Отзыв удалён','🗑️'); }); }
     async function updateBookingStatus(id, status) { await api(`/api/admin/bookings/${id}`,{method:'PUT',body:JSON.stringify({status})}); loadBookings(); loadStats(); showToast('Статус обновлён','📋'); }
 
