@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>О нас — АгроТеч</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div id="header"></div>
+
+  <div class="container">
+    <div class="about-grid">
+      <div class="about-img">
+        <img src="https://images.unsplash.com/photo-1574943320219-553eb213f72d?w=800" alt="Сельскохозяйственная техника" onerror="this.parentElement.innerHTML='🌾'">
+      </div>
+      <div class="about-text">
+        <h2>О компании АгроТеч</h2>
+        <p>Компания АгроТеч — ведущий поставщик услуг аренды сельскохозяйственной техники в России. Мы работаем с 2015 года и за это время помогли тысячам фермерских хозяйств получить доступ к современному оборудованию.</p>
+        <p>Наш автопарк насчитывает более 200 единиц техники от ведущих мировых производителей: John Deere, CLAAS, Amazone, Lemken, Horsch и других. Мы предлагаем гибкие условия аренды — от одного дня до полного сезона.</p>
+        <p>Каждая единица техники проходит регулярное техническое обслуживание и предоставляется клиентам в идеальном рабочем состоянии. Наши специалисты готовы оказать техническую поддержку 24/7.</p>
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat"><h3>200+</h3><p>Единиц техники</p></div>
+      <div class="stat"><h3>1500+</h3><p>Довольных клиентов</p></div>
+      <div class="stat"><h3>10</h3><p>Лет на рынке</p></div>
+      <div class="stat"><h3>50+</h3><p>Регионов РФ</p></div>
+    </div>
+
+    <div class="about-grid" style="margin-top:40px">
+      <div class="about-text">
+        <h2>Наша миссия</h2>
+        <p>Мы верим, что доступ к современной сельскохозяйственной технике не должен быть привилегией крупных агрохолдингов. Наша миссия — сделать передовые технологии доступными для хозяйств любого масштаба.</p>
+        <p>Аренда техники позволяет оптимизировать затраты, избежать расходов на хранение и обслуживание, и всегда использовать самое современное оборудование.</p>
+      </div>
+      <div class="about-img">
+        <img src="https://images.unsplash.com/photo-1592982537447-6f2a6a0c7c18?w=800" alt="Поле" onerror="this.parentElement.innerHTML='🚜'">
+      </div>
+    </div>
+  </div>
+
+  <div id="footer"></div>
+  <script src="/js/main.js"></script>
+  <script>
+    document.getElementById('header').innerHTML = getHeader('about');
+    document.getElementById('footer').innerHTML = getFooter();
+  </script>
+</body>
+</html>

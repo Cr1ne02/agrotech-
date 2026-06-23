@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Личный кабинет — АгроТеч</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div id="header"></div>
+  <div class="container">
+    <div class="profile-layout">
+      <div class="profile-sidebar">
+        <div class="profile-avatar" id="avatar"></div>
+        <h3 id="user-name"></h3>
+        <p id="user-email"></p>
+        <div class="profile-menu">
+          <a href="#" class="active" onclick="showTab('info')">Мои данные</a>
+          <a href="#" onclick="showTab('bookings')">Мои бронирования</a>
+          <a href="#" onclick="logout()">Выйти</a>
+        </div>
+      </div>
+      <div class="profile-content">
+        <div id="tab-info">
+          <h2 style="margin-bottom:20px;color:var(--green-800)">Мои данные</h2>
+          <div id="profile-alert"></div>
+          <form onsubmit="return updateProfile(event)">
+            <div class="form-group"><label>Имя</label><input type="text" id="p-name"></div>
+            <div class="form-group"><label>Телефон</label><input type="tel" id="p-phone"></div>
+            <button type="submit" class="btn btn-primary">Сохранить</button>
+          </form>
+        </div>
+        <div id="tab-bookings" style="display:none">
+          <h2 style="margin-bottom:20px;color:var(--green-800)">Мои бронирования</h2>
+          <div class="table-wrap"><table><thead><tr><th>Техника</th><th>Даты</th><th>Сумма</th><th>Статус</th></tr></thead><tbody id="bookings-body"></tbody></table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="footer"></div>
+  <script src="/js/main.js"></script>
+  <script>
+    document.getElementById('header').innerHTML = getHeader('profile');
+    document.getElementById('footer').innerHTML = getFooter();
+
+    function showTab(tab) {
+      document.getElementById('tab-info').style.display = tab === 'info' ? '' : 'none';
+      document.getElementById('tab-bookings').style.display = tab === 'bookings' ? '' : 'none';
+      document.querySelectorAll('.profile-menu a').forEach((a, i) => a.classList.toggle('active', (tab === 'info' && i === 0) || (tab === 'bookings' && i === 1)));
+      if (tab === 'bookings') loadBookings();
+    }
+
+    async function loadProfile() {
+      try {
+        const user = await api('/api/me');
+        document.getElementById('avatar').textContent = user.name[0].toUpperCase();
+        document.getElementById('user-name').textContent = user.name;
+        document.getElementById('user-email').textContent = user.email;
+        document.getElementById('p-name').value = user.name;
+        document.getElementById('p-phone').value = user.phone || '';
+      } catch { window.location.href = '/login.html'; }
+    }
+
+    async function updateProfile(e) {
+      e.preventDefault();
+      try {
+        await api('/api/me', { method: 'PUT', body: JSON.stringify({ name: document.getElementById('p-name').value, phone: document.getElementById('p-phone').value }) });
+        showAlert(document.getElementById('profile-alert'), 'Данные сохранены!', 'success');
+        loadProfile();
+      } catch (err) { showAlert(document.getElementById('profile-alert'), err.message); }
+      return false;
+    }
+
+    async function loadBookings() {
+      const bookings = await api('/api/bookings');
+      const statusMap = { pending: 'Ожидает', confirmed: 'Подтверждено', cancelled: 'Отменено', completed: 'Завершено' };
+      document.getElementById('bookings-body').innerHTML = bookings.length
+        ? bookings.map(b => `<tr><td>${b.product_name}</td><td>${formatDate(b.start_date)} — ${formatDate(b.end_date)}</td><td>${formatPrice(b.total_price)}</td><td><span class="badge">${statusMap[b.status] || b.status}</span></td></tr>`).join('')
+        : '<tr><td colspan="4" style="text-align:center;color:var(--gray-500)">Нет бронирований</td></tr>';
+    }
+
+    loadProfile();
+  </script>
+</body>
+</html>

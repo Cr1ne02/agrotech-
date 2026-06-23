@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Товар — АгроТеч</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div id="header"></div>
+  <div class="container">
+    <div class="product-detail" id="product-detail"></div>
+    <h2 class="section-title" style="font-size:1.4rem">Отзывы</h2>
+    <div id="review-form-wrap"></div>
+    <div class="reviews-list" id="reviews-list"></div>
+  </div>
+  <div id="footer"></div>
+  <script src="/js/main.js"></script>
+  <script>
+    document.getElementById('header').innerHTML = getHeader('');
+    document.getElementById('footer').innerHTML = getFooter();
+
+    const pid = new URLSearchParams(location.search).get('id');
+    let selectedRating = 5;
+
+    async function loadProduct() {
+      const p = await api(`/api/products/${pid}`);
+      document.title = p.name + ' — АгроТеч';
+      document.getElementById('product-detail').innerHTML = `
+        <div class="product-img">
+          ${p.image ? `<img src="/images/${p.image}" alt="${p.name}" onerror="this.parentElement.innerHTML='🚜'">` : '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:5rem">🚜</div>'}
+        </div>
+        <div class="product-info">
+          <span class="badge">${p.category}</span>
+          <h1>${p.name}</h1>
+          <div class="price">${formatPrice(p.price_per_day)} <small style="font-size:1rem;color:var(--gray-500)">/ день</small></div>
+          <p class="desc">${p.description}</p>
+          <div class="booking-form">
+            <h3>Забронировать</h3>
+            <div class="date-row">
+              <div class="form-group"><label>Дата начала</label><input type="date" id="start_date"></div>
+              <div class="form-group"><label>Дата окончания</label><input type="date" id="end_date"></div>
+            </div>
+            <div id="booking-alert"></div>
+            <button class="btn btn-primary" style="width:100%" onclick="addToCart()">Добавить в корзину</button>
+          </div>
+        </div>`;
+    }
+
+    async function addToCart() {
+      const start_date = document.getElementById('start_date').value;
+      const end_date = document.getElementById('end_date').value;
+      if (!start_date || !end_date) return showAlert(document.getElementById('booking-alert'), 'Выберите даты');
+      if (new Date(end_date) <= new Date(start_date)) return showAlert(document.getElementById('booking-alert'), 'Дата окончания должна быть позже даты начала');
+      try {
+        await api('/api/cart', { method: 'POST', body: JSON.stringify({ product_id: pid, start_date, end_date }) });
+        showAlert(document.getElementById('booking-alert'), 'Добавлено в корзину!', 'success');
+      } catch (e) {
+        showAlert(document.getElementById('booking-alert'), e.message);
+      }
+    }
+
+    async function loadReviews() {
+      const reviews = await api(`/api/reviews/${pid}`);
+      document.getElementById('reviews-list').innerHTML = reviews.length
+        ? reviews.map(r => `
+          <div class="review-item">
+            <div class="review-header"><span class="review-author">${r.user_name}</span><span class="review-date">${formatDate(r.created_at)}</span></div>
+            <div class="review-stars">${renderStars(r.rating)}</div>
+            <div class="review-text">${r.comment || ''}</div>
+          </div>`).join('')
+        : '<p style="color:var(--gray-500)">Пока нет отзывов. Будьте первым!</p>';
+
+      const user = await checkAuth();
+      document.getElementById('review-form-wrap').innerHTML = user ? `
+        <div style="background:var(--green-50);padding:20px;border-radius:var(--radius);margin-bottom:20px">
+          <h4 style="margin-bottom:12px;color:var(--green-800)">Оставить отзыв</h4>
+          <div class="star-input" id="star-input">${[1,2,3,4,5].map(i => `<span data-r="${i}" onclick="setRating(${i})" class="${i <= selectedRating ? 'active' : ''}">★</span>`).join('')}</div>
+          <div class="form-group"><textarea id="review-comment" rows="3" placeholder="Ваш отзыв..."></textarea></div>
+          <div id="review-alert"></div>
+          <button class="btn btn-primary btn-sm" onclick="submitReview()">Отправить</button>
+        </div>` : '<p style="margin-bottom:20px"><a href="/login.html" style="color:var(--green-600)">Войдите</a>, чтобы оставить отзыв</p>';
+    }
+
+    function setRating(r) {
+      selectedRating = r;
+      document.querySelectorAll('#star-input span').forEach(s => { s.classList.toggle('active', s.dataset.r <= r); });
+    }
+
+    async function submitReview() {
+      const comment = document.getElementById('review-comment').value;
+      try {
+        await api('/api/reviews', { method: 'POST', body: JSON.stringify({ product_id: pid, rating: selectedRating, comment }) });
+        document.getElementById('review-comment').value = '';
+        loadReviews();
+      } catch (e) { showAlert(document.getElementById('review-alert'), e.message); }
+    }
+
+    loadProduct();
+    loadReviews();
+  </script>
+</body>
+</html>
