@@ -154,10 +154,10 @@ app.put('/api/admin/products/:id', adminAuth, (req, res) => {
   const id = Number(req.params.id);
   const current = get('SELECT * FROM products WHERE id = ?', [id]);
   if (!current) return res.status(404).json({ error: 'Не найдено' });
-  const name = req.body.name || current.name;
+  const name = req.body.name !== undefined && req.body.name !== '' ? req.body.name : current.name;
   const description = req.body.description !== undefined ? req.body.description : current.description;
-  const price_per_day = req.body.price_per_day || current.price_per_day;
-  const category = req.body.category || current.category;
+  const price_per_day = req.body.price_per_day !== undefined && req.body.price_per_day > 0 ? req.body.price_per_day : current.price_per_day;
+  const category = req.body.category !== undefined && req.body.category !== '' ? req.body.category : current.category;
   const available = req.body.available !== undefined ? req.body.available : current.available;
   run('UPDATE products SET name=?, description=?, price_per_day=?, category=?, available=? WHERE id=?', [name, description, price_per_day, category, available, id]);
   res.json({ success: true });
