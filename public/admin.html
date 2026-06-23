@@ -339,6 +339,9 @@
               <option value="5">★★★★★ (5)</option><option value="4">★★★★☆ (4)</option>
               <option value="3">★★★☆☆ (3)</option><option value="2">★★☆☆☆ (2)</option><option value="1">★☆☆☆☆ (1)</option>
             </select>
+            <div class="toolbar-right">
+              <button class="btn-export" onclick="exportData('reviews')">📥 Экспорт CSV</button>
+            </div>
           </div>
           <div class="content-card-body"><table class="admin-table"><thead><tr><th>Пользователь</th><th>Техника</th><th>Оценка</th><th>Комментарий</th><th>Дата</th><th>Действия</th></tr></thead><tbody id="admin-reviews"></tbody></table></div>
           <div class="table-footer"><span id="reviews-count"></span></div>
@@ -354,9 +357,10 @@
   <!-- Add Product Modal -->
   <div class="admin-modal-overlay" id="modal">
     <div class="admin-modal">
-      <h3>🚜 Добавить технику</h3>
+      <h3 id="modal-title">🚜 Добавить технику</h3>
       <div id="modal-alert"></div>
-      <form onsubmit="return addProduct(event)" enctype="multipart/form-data">
+      <form onsubmit="return saveProduct(event)" enctype="multipart/form-data">
+        <input type="hidden" id="m-id" value="">
         <div class="form-group"><label>Название</label><input type="text" id="m-name" required placeholder="Например: Трактор Case IH"></div>
         <div class="form-group"><label>Описание</label><textarea id="m-desc" rows="3" placeholder="Характеристики и особенности техники..."></textarea></div>
         <div class="form-group"><label>Цена за день (₽)</label><input type="number" id="m-price" required placeholder="10000"></div>
@@ -365,7 +369,7 @@
         </div>
         <div class="form-group"><label>Изображение</label><input type="file" id="m-image" accept="image/*" style="color:#94a3b8"></div>
         <div class="modal-actions">
-          <button type="submit" class="btn-add">✓ Добавить</button>
+          <button type="submit" class="btn-add" id="modal-submit-btn">✓ Добавить</button>
           <button type="button" class="btn-cancel" onclick="closeModal()">Отмена</button>
         </div>
       </form>
@@ -442,7 +446,6 @@
       document.getElementById('sidebar').classList.remove('open');
     }
 
-    function showModal() { document.getElementById('modal').classList.add('active'); }
     function closeModal() { document.getElementById('modal').classList.remove('active'); }
 
     // Export CSV
@@ -457,6 +460,9 @@
       } else if (type === 'users') {
         csv = 'ID,Имя,Email,Телефон,Роль,Дата\n';
         allUsers.forEach(u => csv += `${u.id},"${u.name}","${u.email}","${u.phone||''}",${u.role},${u.created_at}\n`);
+      } else if (type === 'reviews') {
+        csv = 'ID,Пользователь,Техника,Оценка,Комментарий,Дата\n';
+        allReviews.forEach(r => csv += `${r.id},"${r.user_name}","${r.product_name}",${r.rating},"${(r.comment||'').replace(/"/g,'""')}",${r.created_at}\n`);
       }
       const blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8;'});
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click();
@@ -493,6 +499,7 @@
           <td><div class="toggle ${p.available?'on':''}" onclick="toggleAvail(${p.id},${p.available?0:1},this)"></div></td>
           <td><div class="btn-group">
             <button class="btn-view" onclick="viewProduct(${p.id})">👁</button>
+            <button class="btn-edit" onclick="editProduct(${p.id})">✎</button>
             <button class="btn-del" onclick="deleteProduct(${p.id},'${p.name.replace(/'/g,"\\'")}')">✕</button>
           </div></td>
         </tr>`).join('') || '<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">🚜</div><p>Техника не найдена</p></div></td></tr>';
@@ -608,6 +615,7 @@
           <div class="detail-row"><span class="label">Доступность</span><span class="value">${p.available?'✅ Доступна':'❌ Недоступна'}</span></div>
         </div>
         <div class="detail-section"><h4>Описание</h4><p style="color:#cbd5e1;font-size:0.9rem;line-height:1.6">${p.description||'Нет описания'}</p></div>
+        <div style="margin-top:20px"><button class="btn-edit" style="width:100%;padding:12px;font-size:0.9rem" onclick="closeDetail();editProduct(${p.id})">✎ Редактировать</button></div>
       `);
     }
     function viewBooking(id) {
@@ -640,20 +648,56 @@
 
     // Actions
     async function toggleAvail(id, val, el) {
-      await api(`/api/admin/products/${id}`, { method:'PUT', body:JSON.stringify({name:'',description:'',price_per_day:0,category:'',available:val})});
+      await api(`/api/admin/products/${id}`, { method:'PUT', body:JSON.stringify({available:val})});
       el.classList.toggle('on'); showToast(val?'Техника доступна':'Техника скрыта', val?'✅':'🔒');
       loadProducts();
     }
-    async function addProduct(e) {
+
+    function showModal(editId) {
+      const modal = document.getElementById('modal');
+      const form = modal.querySelector('form');
+      document.getElementById('m-id').value = '';
+      form.reset();
+      document.getElementById('modal-title').textContent = '🚜 Добавить технику';
+      document.getElementById('modal-submit-btn').textContent = '✓ Добавить';
+      modal.classList.add('active');
+    }
+
+    function editProduct(id) {
+      const p = allProducts.find(x => x.id === id);
+      if (!p) return;
+      document.getElementById('m-id').value = p.id;
+      document.getElementById('m-name').value = p.name;
+      document.getElementById('m-desc').value = p.description || '';
+      document.getElementById('m-price').value = p.price_per_day;
+      document.getElementById('m-cat').value = p.category || 'Тракторы';
+      document.getElementById('modal-title').textContent = '✎ Редактировать технику';
+      document.getElementById('modal-submit-btn').textContent = '✓ Сохранить';
+      document.getElementById('modal').classList.add('active');
+    }
+
+    async function saveProduct(e) {
       e.preventDefault();
-      const fd = new FormData();
-      fd.append('name', document.getElementById('m-name').value);
-      fd.append('description', document.getElementById('m-desc').value);
-      fd.append('price_per_day', document.getElementById('m-price').value);
-      fd.append('category', document.getElementById('m-cat').value);
-      if(document.getElementById('m-image').files[0]) fd.append('image', document.getElementById('m-image').files[0]);
-      await fetch('/api/admin/products',{method:'POST',body:fd});
-      closeModal(); e.target.reset(); loadAll(); showToast('Техника добавлена в каталог','🚜');
+      const editId = document.getElementById('m-id').value;
+      if (editId) {
+        const body = {
+          name: document.getElementById('m-name').value,
+          description: document.getElementById('m-desc').value,
+          price_per_day: Number(document.getElementById('m-price').value),
+          category: document.getElementById('m-cat').value
+        };
+        await api(`/api/admin/products/${editId}`, { method:'PUT', body:JSON.stringify(body) });
+        closeModal(); e.target.reset(); loadAll(); showToast('Техника обновлена','✅');
+      } else {
+        const fd = new FormData();
+        fd.append('name', document.getElementById('m-name').value);
+        fd.append('description', document.getElementById('m-desc').value);
+        fd.append('price_per_day', document.getElementById('m-price').value);
+        fd.append('category', document.getElementById('m-cat').value);
+        if(document.getElementById('m-image').files[0]) fd.append('image', document.getElementById('m-image').files[0]);
+        await fetch('/api/admin/products',{method:'POST',body:fd});
+        closeModal(); e.target.reset(); loadAll(); showToast('Техника добавлена в каталог','🚜');
+      }
       return false;
     }
     function deleteProduct(id,name) { showConfirm('Удалить технику?', `"${name}" будет удалена из каталога.`, async()=>{ await api(`/api/admin/products/${id}`,{method:'DELETE'}); loadAll(); showToast('Техника удалена','🗑️'); }); }
